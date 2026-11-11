@@ -1,0 +1,22 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+out/
+.idea/
+.vscode/
+*.iml
+*.class
+*.log
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+spring-boot-devtools.properties
+
+# Java
+hs_err_pid*
+
+# OS
+*.swp
+*.swo
