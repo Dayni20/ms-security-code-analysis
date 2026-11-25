@@ -9,6 +9,7 @@ const configuraciones = {
   ai: { ruta: '/api/v1/analysis/ai', descripcion: 'Análisis independiente del código mediante Qwen y Ollama local.', espera: 'La IA analiza los archivos de forma secuencial. Puede tardar varios minutos; mantén esta página abierta.' },
   hybrid: { ruta: '/api/v1/analysis/hybrid', descripcion: 'Detección independiente con ambos métodos y correlación de sus hallazgos.', espera: 'Se ejecutan ambos analizadores y se revisa la evidencia local. Puede tardar varios minutos; mantén esta página abierta.' }
 };
+const nombresMetodos = { static: 'Análisis estático', ai: 'Análisis con IA', hybrid: 'Análisis híbrido' };
 const etiquetas = {
   COMPLETADO: 'Completado', PARCIAL: 'Parcial', INCOMPLETO: 'Incompleto', ERROR: 'Error',
   ESTATICO: 'Estático', IA: 'IA', AMBOS: 'Ambos', CRITICO: 'Crítico', ALTO: 'Alto', MEDIO: 'Medio', BAJO: 'Bajo',
@@ -21,6 +22,8 @@ const lista = valor => Array.isArray(valor) ? valor : [];
 const texto = valor => valor === null || valor === undefined || valor === '' ? 'No disponible' : String(valor);
 const etiqueta = valor => Object.hasOwn(etiquetas, valor) ? etiquetas[valor] : texto(valor);
 let procesando = false;
+let informeDisponible = null;
+let descargando = false;
 
 function crear(tipo, contenido, clase) {
   const elemento = document.createElement(tipo);
@@ -164,7 +167,7 @@ function mostrarResultado(respuesta, metodoElegido, transcurrido, httpCorrecto) 
   const estado = respuesta.estado || resultado.estado || (httpCorrecto ? 'COMPLETADO' : 'ERROR');
   const completo = httpCorrecto && estado === 'COMPLETADO';
   obtener('estado').replaceChildren(insignia(estado));
-  obtener('nombre-proyecto').textContent = texto(respuesta.nombreArchivoZip || archivo.files[0]?.name);
+  obtener('nombre-proyecto').textContent = `${texto(respuesta.nombreArchivoZip || archivo.files[0]?.name)} · ${nombresMetodos[metodoElegido]}`;
   obtener('total-archivos').textContent = lista(resultado.archivosAnalizados).length;
   obtener('detalle-archivos').textContent = metodoElegido === 'hybrid' ? 'Procesados por al menos un analizador' : 'Completados por el analizador';
   obtener('total-hallazgos').textContent = resultado.hallazgos.length;
@@ -174,6 +177,15 @@ function mostrarResultado(respuesta, metodoElegido, transcurrido, httpCorrecto) 
   mostrarHallazgos(resultado.hallazgos, completo);
   mostrarInformacion(resultado, metodoElegido);
   obtener('resultados').hidden = false;
+  informeDisponible = {
+    metodo: metodoElegido,
+    nombreArchivoZip: respuesta.nombreArchivoZip || archivo.files[0]?.name,
+    fechaAnalisis: new Date().toISOString(),
+    tiempoSolicitudMilisegundos: Math.round(transcurrido),
+    respuesta: JSON.parse(JSON.stringify(respuesta))
+  };
+  obtener('descargar-pdf').hidden = false;
+  obtener('estado-descarga').textContent = '';
   const sinCobertura = lista(resultado.lenguajesSinReglas).length || lista(resultado.lenguajesSinCobertura).length;
   if (!completo && httpCorrecto) mostrarAviso('Resultado parcial o incompleto. Consulta los errores y la cobertura antes de interpretar los hallazgos.');
   else if (sinCobertura) mostrarAviso('El resultado incluye lenguajes sin cobertura. La ausencia de alertas no permite evaluar esos archivos.');
@@ -189,7 +201,7 @@ archivo.addEventListener('change', () => {
 
 formulario.addEventListener('submit', async evento => {
   evento.preventDefault();
-  if (procesando) return;
+  if (procesando || descargando) return;
   const seleccionado = archivo.files[0];
   if (!seleccionado || !/\.zip$/i.test(seleccionado.name) || seleccionado.size === 0) {
     mostrarAviso('Selecciona un archivo ZIP que no esté vacío.', true);
@@ -202,6 +214,9 @@ formulario.addEventListener('submit', async evento => {
   const metodoElegido = metodo.value;
   const configuracion = configuraciones[metodoElegido];
   procesando = true;
+  informeDisponible = null;
+  obtener('descargar-pdf').hidden = true;
+  obtener('estado-descarga').textContent = '';
   mostrarAviso('');
   obtener('resultados').hidden = true;
   [archivo, metodo, obtener('iniciar')].forEach(elemento => { elemento.disabled = true; });
@@ -235,5 +250,49 @@ formulario.addEventListener('submit', async evento => {
     obtener('procesando').hidden = true;
     formulario.setAttribute('aria-busy', 'false');
     [archivo, metodo, obtener('iniciar')].forEach(elemento => { elemento.disabled = false; });
+  }
+});
+
+obtener('descargar-pdf').addEventListener('click', async () => {
+  if (!informeDisponible || procesando || descargando) return;
+  const boton = obtener('descargar-pdf');
+  const solicitud = informeDisponible;
+  descargando = true;
+  boton.disabled = true;
+  obtener('iniciar').disabled = true;
+  boton.textContent = 'Generando informe…';
+  obtener('estado-descarga').textContent = 'Preparando el PDF con el resultado disponible, sin repetir el análisis.';
+  try {
+    const respuesta = await fetch('/api/v1/analysis/report/pdf', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' },
+      body: JSON.stringify(solicitud)
+    });
+    if (!respuesta.ok) {
+      let mensaje = `No se pudo generar el informe (HTTP ${respuesta.status}).`;
+      try {
+        const error = await respuesta.json();
+        if (typeof error.error === 'string') mensaje += ` ${error.error}`;
+      } catch {}
+      throw new Error(mensaje);
+    }
+    if (!respuesta.headers.get('Content-Type')?.includes('application/pdf')) throw new Error('El servidor no devolvió un archivo PDF válido.');
+    const pdf = await respuesta.blob();
+    if (!pdf.size || await pdf.slice(0, 5).text() !== '%PDF-') throw new Error('El archivo recibido no es un PDF válido.');
+    const direccion = URL.createObjectURL(pdf);
+    const enlace = document.createElement('a');
+    enlace.href = direccion;
+    enlace.download = 'informe-seguridad.pdf';
+    document.body.append(enlace);
+    enlace.click();
+    enlace.remove();
+    window.setTimeout(() => URL.revokeObjectURL(direccion), 30000);
+    obtener('estado-descarga').textContent = 'Se ha iniciado la descarga del informe PDF.';
+  } catch (error) {
+    obtener('estado-descarga').textContent = error instanceof TypeError ? 'No se pudo descargar el PDF. Comprueba la conexión y vuelve a intentarlo.' : error.message;
+  } finally {
+    descargando = false;
+    boton.disabled = false;
+    obtener('iniciar').disabled = false;
+    boton.textContent = '↓ Descargar informe PDF';
   }
 });

@@ -257,6 +257,15 @@ public final class Constantes {
     public static final String CADENA_VACIA = "";
     public static final String SEGMENTO_ACTUAL = ".";
     public static final String SEGMENTO_PADRE = "..";
+    public static final String RUTA_INFORME_PDF = "/api/v1/analysis/report/pdf";
+    public static final String MENSAJE_SOLICITUD_PDF_INVALIDA = "El resultado enviado para el informe es inválido o incompleto";
+    public static final String MENSAJE_ERROR_PDF = "No se pudo generar el informe PDF";
+    public static final String NOMBRE_DESCARGA_PDF = "informe-seguridad.pdf";
+    public static final String FUENTE_INFORME_PDF = "/org/apache/pdfbox/resources/ttf/LiberationSans-Regular.ttf";
+    public static final String ZONA_INFORME_PDF = "America/Guayaquil";
+    public static final String AVISO_INFORME_PDF = "Los hallazgos son indicios sujetos a revisión técnica. Su ausencia no garantiza que el código sea seguro. La coincidencia entre métodos tampoco confirma una vulnerabilidad.";
+    public static final String ORIGEN_INFORME_PDF = "Informe generado a partir de una respuesta remitida por el cliente. Sin persistencia ni firma, no acredita la integridad ni la autenticidad de los datos declarados. No se han vuelto a ejecutar los analizadores.";
+    public static final String SIN_DATO_INFORME = "No disponible / no informado";
     private Constantes() {
     }
 }
