@@ -210,6 +210,53 @@ public final class Constantes {
             "java", "Java", "python", "Python", "javascript", "JavaScript", "typescript", "TypeScript",
             "c", "C", "cpp", "C++", "csharp", "C#", "php", "PHP");
 
+    public static final String RUTA_ANALISIS_HIBRIDO = "/api/v1/analysis/hybrid";
+    public static final String ESTADO_ANALISIS_PARCIAL = "PARCIAL";
+    public static final String ESTADO_ANALISIS_ERROR = "ERROR";
+    public static final String MOTIVO_ERROR_INTERNO = "ERROR_INTERNO";
+    public static final String MOTIVO_CAPACIDAD_AGOTADA = "CAPACIDAD_AGOTADA";
+    public static final String MOTIVO_COBERTURA_INCOMPLETA = "COBERTURA_INCOMPLETA";
+    public static final String MENSAJE_ERROR_HIBRIDO = "El analizador no pudo completar su ejecución";
+    public static final String MENSAJE_CAPACIDAD_HIBRIDA = "La capacidad de ejecución del análisis híbrido está ocupada";
+    public static final String PROPIEDAD_CONCURRENCIA_HIBRIDA = "${analisis.hibrido.ejecucion-concurrente:false}";
+    public static final String VERSION_CORRELACION = "correlacion-local-v1";
+    public static final String PREFIJO_HALLAZGO_HIBRIDO = "H-";
+    public static final String CORRELACION_OPERACION = "Misma ruta y CWE, con una única operación local común identificada en el código";
+    public static final String CORRELACION_PROPAGACION = "La ubicación pertenece a la operación o a una declaración String que alcanza únicamente esa operación sin reasignaciones";
+    public static final String CORRELACION_AMBIGUA = "La ubicación puede corresponder a varias operaciones; no se fusionan los hallazgos";
+    public static final String EVIDENCIA_PENDIENTE = "No hay evidencia local suficiente para confirmar ni descartar el hallazgo; requiere revisión";
+    public static final String EVIDENCIA_CONSTANTE = "El argumento de esta operación es una cadena constante resuelta localmente, sin entrada externa en ese argumento";
+    public static final String EVIDENCIA_PREPARADA = "La estructura SQL enviada a prepareStatement es constante; los valores enlazados no forman parte de esa estructura";
+    public static final String EVIDENCIA_FLUJO = "Se observa un flujo local de entrada externa hacia la operación, sin transformaciones ni validaciones intermedias interpretables; es evidencia local, no confirmación de explotabilidad";
+    public static final String EVIDENCIA_ORIGEN = "Lectura de un dato externo mediante una API de entrada reconocida";
+    public static final String EVIDENCIA_PROPAGACION = "Propagación mediante una declaración String local sin reasignaciones previas a la operación";
+    public static final String EVIDENCIA_OPERACION = "Operación identificada para la categoría CWE del hallazgo";
+    public static final String EVIDENCIA_CONSTRUCTOR = "La construcción de un objeto File no demuestra por sí sola acceso al sistema de archivos; requiere revisión del uso posterior";
+    public static final String LIMITACION_EVIDENCIA = "La evidencia automática reconoce un subconjunto local de Java: cadenas, concatenación y operaciones conocidas; no sustituye un AST, resolución de tipos ni análisis de flujo completo";
+    public static final String LIMITACION_CORRELACION = "Los flujos entre métodos, campos, alias, controles o lenguajes no interpretados se conservan pendientes; la proximidad de líneas y el acuerdo entre detectores no confirman vulnerabilidades";
+    public static final String LIMITACION_PARCIALES = "Los resultados incompletos o sin cobertura no se interpretan como ausencia de vulnerabilidades; los hallazgos descartados se conservan con sus originales y justificación";
+    public static final String LENGUAJE_EVIDENCIA_JAVA = "Java";
+    public static final String PALABRA_STRING = "String";
+    public static final String PALABRA_NEW = "new";
+    public static final String TIPO_FILE = "File";
+    public static final String TIPO_RUNTIME = "Runtime";
+    public static final String METODO_GET_RUNTIME = "getRuntime";
+    public static final String METODO_EXEC = "exec";
+    public static final String METODO_PREPARE = "prepareStatement";
+    public static final String CWE_SQL = "CWE-89";
+    public static final String CWE_COMANDOS = "CWE-78";
+    public static final String CWE_RUTAS = "CWE-22";
+    public static final Set<String> METODOS_SQL_HIBRIDOS = Set.of("executeQuery", "executeUpdate", "execute", "addBatch", "prepareStatement");
+    public static final Set<String> METODOS_ORIGEN_HIBRIDOS = Set.of("getParameter", "getHeader", "readLine", "getenv", "getProperty");
+    public static final Set<String> CONTROLES_HIBRIDOS = Set.of("if", "for", "while", "switch", "catch", "assert", "synchronized");
+    public static final Set<String> TIPOS_SOMBREADOS_HIBRIDOS = Set.of("class", "interface", "record", "enum");
+    public static final Set<String> SQL_OTROS_LENGUAJES = Set.of("query", "execute", "executemany");
+    public static final Set<String> COMANDOS_OTROS_LENGUAJES = Set.of("exec", "system", "run", "call", "execSync");
+    public static final Set<String> RUTAS_OTROS_LENGUAJES = Set.of("open", "readFile", "readFileSync", "sendFile");
+
+    public static final String CADENA_VACIA = "";
+    public static final String SEGMENTO_ACTUAL = ".";
+    public static final String SEGMENTO_PADRE = "..";
     private Constantes() {
     }
 }

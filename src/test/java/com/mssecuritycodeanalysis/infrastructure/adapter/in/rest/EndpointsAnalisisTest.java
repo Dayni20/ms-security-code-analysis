@@ -157,6 +157,32 @@ class EndpointsAnalisisTest {
         return new MockMultipartFile("file", "proyecto.zip", "application/zip", salida.toByteArray());
     }
 
+    @Test
+    void hibridoProcesaLosSeisArchivosYConservaFalloParcial() throws Exception {
+        when(analizadorEstatico.analizar(anyList())).thenAnswer(invocacion -> {
+            List<ArchivoFuente> archivos = invocacion.getArgument(0);
+            assertThat(archivos).hasSize(6);
+            return new ResultadoAnalisisEstatico(List.of(), List.of("Java"), List.of("Java"), List.of(),
+                    archivos.stream().map(ArchivoFuente::rutaRelativa).toList(), "1.187.0", "huella");
+        });
+        when(analizadorIA.analizar(anyList())).thenThrow(new ExcepcionAnalisisIA("No disponible", Motivo.NO_DISPONIBLE));
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(salida);
+                java.util.stream.Stream<Path> fuentes = Files.list(Path.of("pruebas-manuales"))) {
+            for (Path fuente : fuentes.filter(ruta -> ruta.toString().endsWith(".java")).sorted().toList()) {
+                zip.putNextEntry(new ZipEntry(fuente.getFileName().toString()));
+                zip.write(Files.readAllBytes(fuente));
+                zip.closeEntry();
+            }
+        }
+        mvc.perform(multipart("/api/v1/analysis/hybrid").file(new MockMultipartFile("file", "proyecto.zip",
+                "application/zip", salida.toByteArray())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("PARCIAL"))
+                .andExpect(jsonPath("$.resultado.archivosRecibidos.length()").value(6))
+                .andExpect(jsonPath("$.resultado.ia.motivo").value("NO_DISPONIBLE"));
+        comprobarLimpieza();
+    }
+
     private ResultadoAnalisisIA resultado(String estado) {
         return new ResultadoAnalisisIA(estado, List.of(), List.of("src/a.py"), List.of("Python"), List.of("Python"),
                 List.of(), "qwen2.5-coder:7b-instruct", "digest", new ResultadoAnalisisIA.ParametrosGeneracion(
