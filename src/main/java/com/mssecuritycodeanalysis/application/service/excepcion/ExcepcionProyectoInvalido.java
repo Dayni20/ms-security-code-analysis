@@ -1,4 +1,4 @@
-package com.mssecuritycodeanalysis.application.service;
+package com.mssecuritycodeanalysis.application.service.excepcion;
 
 public class ExcepcionProyectoInvalido extends RuntimeException {
 

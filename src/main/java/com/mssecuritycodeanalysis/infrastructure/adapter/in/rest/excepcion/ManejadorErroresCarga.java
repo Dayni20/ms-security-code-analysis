@@ -11,8 +11,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
-import com.mssecuritycodeanalysis.application.service.ExcepcionProyectoInvalido.Motivo;
-import com.mssecuritycodeanalysis.application.service.ExcepcionProyectoInvalido;
+import com.mssecuritycodeanalysis.application.service.excepcion.ExcepcionProyectoInvalido.Motivo;
+import com.mssecuritycodeanalysis.application.service.excepcion.ExcepcionProyectoInvalido;
 import com.mssecuritycodeanalysis.domain.Constantes;
 
 @RestControllerAdvice

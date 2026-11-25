@@ -1,0 +1,186 @@
+rules:
+  - id: local.java.cwe-89.entrada-en-consulta-sql
+    languages: [java]
+    message: Posible inyección SQL por datos externos utilizados en una consulta.
+    severity: ERROR
+    metadata:
+      cwe: [CWE-89]
+    mode: taint
+    pattern-sources:
+      - pattern: $SOLICITUD.getParameter(...)
+      - pattern: $SOLICITUD.getHeader(...)
+      - pattern: $LECTOR.readLine(...)
+      - pattern: System.getenv(...)
+      - pattern: System.getProperty(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $SENTENCIA.executeQuery($CONSULTA, ...)
+              - pattern: $SENTENCIA.executeUpdate($CONSULTA, ...)
+              - pattern: $SENTENCIA.execute($CONSULTA, ...)
+              - pattern: $CONEXION.prepareStatement($CONSULTA, ...)
+          - focus-metavariable: $CONSULTA
+
+  - id: local.java.cwe-78.entrada-en-comando
+    languages: [java]
+    message: Posible inyección de comandos por datos externos utilizados al iniciar un proceso.
+    severity: ERROR
+    metadata:
+      cwe: [CWE-78]
+    mode: taint
+    pattern-sources:
+      - pattern: $SOLICITUD.getParameter(...)
+      - pattern: $SOLICITUD.getHeader(...)
+      - pattern: $LECTOR.readLine(...)
+      - pattern: System.getenv(...)
+      - pattern: System.getProperty(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: Runtime.getRuntime().exec($COMANDO, ...)
+              - pattern: new ProcessBuilder($COMANDO, ...)
+          - focus-metavariable: $COMANDO
+
+  - id: local.java.cwe-22.entrada-en-ruta
+    languages: [java]
+    message: Posible recorrido de directorios por datos externos utilizados para construir una ruta.
+    severity: WARNING
+    metadata:
+      cwe: [CWE-22]
+    mode: taint
+    pattern-sources:
+      - pattern: $SOLICITUD.getParameter(...)
+      - pattern: $SOLICITUD.getHeader(...)
+      - pattern: $LECTOR.readLine(...)
+      - pattern: System.getenv(...)
+      - pattern: System.getProperty(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: new java.io.File($RUTA)
+              - pattern: new java.io.FileInputStream($RUTA)
+              - pattern: new java.io.FileReader($RUTA)
+              - pattern: java.nio.file.Paths.get($RUTA, ...)
+          - focus-metavariable: $RUTA
+
+  - id: local.python.cwe-89.entrada-en-consulta-sql
+    languages: [python]
+    message: Posible inyección SQL por datos externos utilizados en el texto de una consulta.
+    severity: ERROR
+    metadata:
+      cwe: [CWE-89]
+    mode: taint
+    pattern-sources:
+      - pattern: input(...)
+      - pattern: $SOLICITUD.args.get(...)
+      - pattern: $SOLICITUD.form.get(...)
+      - pattern: $SOLICITUD.args[$CLAVE]
+      - pattern: os.getenv(...)
+      - pattern: sys.argv[$INDICE]
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $CURSOR.execute($CONSULTA, ...)
+              - pattern: $CURSOR.executemany($CONSULTA, ...)
+          - focus-metavariable: $CONSULTA
+
+  - id: local.python.cwe-78.entrada-en-comando
+    languages: [python]
+    message: Posible inyección de comandos por datos externos enviados al intérprete del sistema.
+    severity: ERROR
+    metadata:
+      cwe: [CWE-78]
+    mode: taint
+    pattern-sources:
+      - pattern: input(...)
+      - pattern: $SOLICITUD.args.get(...)
+      - pattern: $SOLICITUD.form.get(...)
+      - pattern: $SOLICITUD.args[$CLAVE]
+      - pattern: os.getenv(...)
+      - pattern: sys.argv[$INDICE]
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: os.system($COMANDO)
+              - pattern: os.popen($COMANDO, ...)
+          - focus-metavariable: $COMANDO
+
+  - id: local.python.cwe-22.entrada-en-ruta
+    languages: [python]
+    message: Posible recorrido de directorios por datos externos utilizados al acceder a un archivo.
+    severity: WARNING
+    metadata:
+      cwe: [CWE-22]
+    mode: taint
+    pattern-sources:
+      - pattern: input(...)
+      - pattern: $SOLICITUD.args.get(...)
+      - pattern: $SOLICITUD.form.get(...)
+      - pattern: $SOLICITUD.args[$CLAVE]
+      - pattern: os.getenv(...)
+      - pattern: sys.argv[$INDICE]
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: open($RUTA, ...)
+              - pattern: os.open($RUTA, ...)
+              - pattern: pathlib.Path($RUTA)
+          - focus-metavariable: $RUTA
+
+  - id: local.javascript-typescript.cwe-89.entrada-en-consulta-sql
+    languages: [javascript, typescript]
+    message: Posible inyección SQL por datos de una solicitud utilizados en una consulta.
+    severity: ERROR
+    metadata:
+      cwe: [CWE-89]
+    mode: taint
+    pattern-sources:
+      - pattern: $SOLICITUD.query.$CAMPO
+      - pattern: $SOLICITUD.body.$CAMPO
+      - pattern: $SOLICITUD.params.$CAMPO
+      - pattern: process.env.$VARIABLE
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $CONEXION.query($CONSULTA, ...)
+              - pattern: $CONEXION.execute($CONSULTA, ...)
+          - focus-metavariable: $CONSULTA
+
+  - id: local.javascript-typescript.cwe-78.entrada-en-comando
+    languages: [javascript, typescript]
+    message: Posible inyección de comandos por datos externos enviados a child_process.
+    severity: ERROR
+    metadata:
+      cwe: [CWE-78]
+    mode: taint
+    pattern-sources:
+      - pattern: $SOLICITUD.query.$CAMPO
+      - pattern: $SOLICITUD.body.$CAMPO
+      - pattern: $SOLICITUD.params.$CAMPO
+      - pattern: process.env.$VARIABLE
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: child_process.exec($COMANDO, ...)
+              - pattern: child_process.execSync($COMANDO, ...)
+          - focus-metavariable: $COMANDO
+
+  - id: local.javascript-typescript.cwe-22.entrada-en-ruta
+    languages: [javascript, typescript]
+    message: Posible recorrido de directorios por datos externos utilizados en una operación de archivos.
+    severity: WARNING
+    metadata:
+      cwe: [CWE-22]
+    mode: taint
+    pattern-sources:
+      - pattern: $SOLICITUD.query.$CAMPO
+      - pattern: $SOLICITUD.body.$CAMPO
+      - pattern: $SOLICITUD.params.$CAMPO
+      - pattern: process.env.$VARIABLE
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: fs.readFile($RUTA, ...)
+              - pattern: fs.readFileSync($RUTA, ...)
+              - pattern: fs.createReadStream($RUTA, ...)
+          - focus-metavariable: $RUTA

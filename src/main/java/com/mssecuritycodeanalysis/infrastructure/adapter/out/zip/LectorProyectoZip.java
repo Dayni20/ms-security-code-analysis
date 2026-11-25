@@ -21,8 +21,8 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import com.mssecuritycodeanalysis.application.port.out.LectorProyectoFuente;
-import com.mssecuritycodeanalysis.application.service.ExcepcionProyectoInvalido.Motivo;
-import com.mssecuritycodeanalysis.application.service.ExcepcionProyectoInvalido;
+import com.mssecuritycodeanalysis.application.service.excepcion.ExcepcionProyectoInvalido.Motivo;
+import com.mssecuritycodeanalysis.application.service.excepcion.ExcepcionProyectoInvalido;
 import com.mssecuritycodeanalysis.domain.Constantes;
 import com.mssecuritycodeanalysis.domain.model.ArchivoFuente;
 import com.mssecuritycodeanalysis.infrastructure.config.PropiedadesCargaZip;
@@ -82,6 +82,7 @@ public class LectorProyectoZip implements LectorProyectoFuente {
         List<ArchivoFuente> archivos = new ArrayList<>();
         Set<String> rutas = new HashSet<>();
         long bytesDescomprimidos = 0;
+        byte[] bloque = new byte[TAMANO_BLOQUE];
         try (ZipFile zip = new ZipFile(archivoTemporal.toFile(), StandardCharsets.UTF_8)) {
             validarCantidadEntradas(zip.size());
             var entradas = zip.entries();
@@ -90,15 +91,32 @@ public class LectorProyectoZip implements LectorProyectoFuente {
                 String ruta = validarRuta(entrada.getName());
                 validarRutaUnica(ruta, rutas);
                 validarLimitesDescompresion(entrada.getSize(), 0, bytesDescomprimidos);
-                String lenguaje = entrada.isDirectory() ? null : identificarLenguaje(ruta);
+                String lenguaje = seleccionarLenguaje(entrada, ruta);
                 ByteArrayOutputStream contenido = lenguaje != null ? new ByteArrayOutputStream() : null;
-                bytesDescomprimidos += leerContenidoEntrada(zip, entrada, contenido, bytesDescomprimidos);
+                bytesDescomprimidos += leerContenidoEntrada(zip, entrada, contenido, bytesDescomprimidos, bloque);
                 if (lenguaje != null) {
                     archivos.add(new ArchivoFuente(ruta, decodificarContenido(contenido.toByteArray()), lenguaje));
                 }
             }
         }
         return List.copyOf(archivos);
+    }
+
+    private String seleccionarLenguaje(ZipEntry entrada, String ruta) {
+        if (entrada.isDirectory() || perteneceADirectorioExcluido(ruta)) {
+            return null;
+        }
+        return identificarLenguaje(ruta);
+    }
+
+    private boolean perteneceADirectorioExcluido(String ruta) {
+        String[] segmentos = ruta.split(Constantes.SEPARADOR_RUTA_UNIX);
+        for (int indice = 0; indice < segmentos.length - 1; indice++) {
+            if (limites.directoriosExcluidos().contains(segmentos[indice])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String identificarLenguaje(String ruta) {
@@ -111,10 +129,9 @@ public class LectorProyectoZip implements LectorProyectoFuente {
     }
 
     private long leerContenidoEntrada(ZipFile zip, ZipEntry entrada, ByteArrayOutputStream contenido,
-            long bytesDescomprimidos) throws IOException {
+            long bytesDescomprimidos, byte[] bloque) throws IOException {
         CRC32 verificadorCrc = new CRC32();
         long bytesEntrada = 0;
-        byte[] bloque = new byte[TAMANO_BLOQUE];
         try (InputStream flujo = zip.getInputStream(entrada)) {
             int bytesLeidos;
             while ((bytesLeidos = flujo.read(bloque)) != -1) {

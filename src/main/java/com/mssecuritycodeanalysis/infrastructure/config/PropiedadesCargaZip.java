@@ -2,6 +2,7 @@ package com.mssecuritycodeanalysis.infrastructure.config;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -22,5 +23,6 @@ public record PropiedadesCargaZip(
         @Min(1) long maxBytesDescomprimidos,
         @Min(1) int maxEntradas,
         @NotNull Path directorioTemporal,
-        @NotEmpty Map<@Pattern(regexp = Constantes.PATRON_EXTENSION_PERMITIDA) String, @NotBlank String> lenguajesPorExtension) {
+        @NotEmpty Map<@Pattern(regexp = Constantes.PATRON_EXTENSION_PERMITIDA) String, @NotBlank String> lenguajesPorExtension,
+        @NotNull Set<@NotBlank @Pattern(regexp = Constantes.PATRON_DIRECTORIO_EXCLUIDO) String> directoriosExcluidos) {
 }

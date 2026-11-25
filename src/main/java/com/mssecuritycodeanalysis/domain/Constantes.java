@@ -1,5 +1,7 @@
 package com.mssecuritycodeanalysis.domain;
 
+import java.util.Map;
+
 public final class Constantes {
 
     public static final String MENSAJE_RUTA_ARCHIVO_OBLIGATORIA = "La ruta del archivo es obligatoria";
@@ -32,6 +34,7 @@ public final class Constantes {
     public static final String PROPIEDAD_NOMBRE_APLICACION = "${spring.application.name}";
     public static final String PREFIJO_CONFIGURACION_CARGA = "proyecto.carga";
     public static final String PATRON_EXTENSION_PERMITIDA = "[a-z0-9]+";
+    public static final String PATRON_DIRECTORIO_EXCLUIDO = "[^/\\\\:\\p{Cntrl}]+";
     public static final String EXTENSION_ZIP = ".zip";
     public static final String PREFIJO_ARCHIVO_TEMPORAL = "proyecto-";
     public static final String SEPARADOR_RUTA_UNIX = "/";
@@ -43,6 +46,95 @@ public final class Constantes {
     public static final char CARACTER_SEPARADOR_UNIX = '/';
     public static final char CARACTER_SEPARADOR_WINDOWS = '\\';
     public static final char CARACTER_PUNTO = '.';
+
+    public static final String RUTA_ANALISIS_ESTATICO = "/api/v1/analysis/static";
+    public static final String PREFIJO_CONFIGURACION_SEMGREP = "semgrep";
+    public static final String METODO_DETECCION_ESTATICO = "ESTATICO";
+    public static final String ESTADO_ANALISIS_COMPLETADO = "COMPLETADO";
+    public static final String CLAVE_MOTIVO = "motivo";
+    public static final String MENSAJE_SEMGREP_NO_DISPONIBLE = "No se pudo iniciar Semgrep; revise el ejecutable configurado";
+    public static final String MENSAJE_REGLAS_INVALIDAS = "Las reglas locales de Semgrep no existen o tienen una configuración inválida";
+    public static final String MENSAJE_SIN_COBERTURA = "Los lenguajes del proyecto no tienen cobertura en las reglas locales de Semgrep";
+    public static final String MENSAJE_TIEMPO_SEMGREP_AGOTADO = "Semgrep superó el tiempo máximo de ejecución";
+    public static final String MENSAJE_EJECUCION_SEMGREP_FALLIDA = "Semgrep no pudo completar el análisis estático";
+    public static final String MENSAJE_SALIDA_SEMGREP_INVALIDA = "Semgrep devolvió una salida inválida o un análisis incompleto";
+    public static final String MENSAJE_SALIDA_SEMGREP_EXCESIVA = "La salida de Semgrep supera el tamaño permitido";
+    public static final String MENSAJE_PREPARACION_ANALISIS_FALLIDA = "No se pudieron preparar los archivos para el análisis estático";
+    public static final String MENSAJE_LIMPIEZA_ANALISIS_FALLIDA = "No se pudieron eliminar los archivos temporales del análisis estático";
+    public static final String PREFIJO_TEMPORAL_ANALISIS = "analisis-";
+    public static final String DIRECTORIO_FUENTES = "fuentes";
+    public static final String ARCHIVO_REGLAS_TEMPORALES = "reglas.yaml";
+    public static final String ARCHIVO_SEMGREPIGNORE = ".semgrepignore";
+    public static final String TEXTO_VACIO = "";
+    public static final String ALGORITMO_HUELLA_REGLAS = "SHA-256";
+    public static final String CAMPO_REGLAS = "rules";
+    public static final String CAMPO_IDENTIFICADOR_REGLA = "id";
+    public static final String CAMPO_LENGUAJES_REGLA = "languages";
+    public static final String CAMPO_RESULTADOS_SEMGREP = "results";
+    public static final String CAMPO_ERRORES_SEMGREP = "errors";
+    public static final String CAMPO_RUTAS_SEMGREP = "paths";
+    public static final String CAMPO_ARCHIVOS_ESCANEADOS = "scanned";
+    public static final String CAMPO_REGLAS_OMITIDAS = "skipped_rules";
+    public static final String CAMPO_VERSION_SEMGREP = "version";
+    public static final String CAMPO_REGLA_HALLAZGO = "check_id";
+    public static final String CAMPO_RUTA_HALLAZGO = "path";
+    public static final String CAMPO_INICIO_HALLAZGO = "start";
+    public static final String CAMPO_LINEA_HALLAZGO = "line";
+    public static final String CAMPO_EXTRA_HALLAZGO = "extra";
+    public static final String CAMPO_MENSAJE_HALLAZGO = "message";
+    public static final String CAMPO_SEVERIDAD_HALLAZGO = "severity";
+    public static final String CAMPO_METADATA_HALLAZGO = "metadata";
+    public static final String CAMPO_CWE_HALLAZGO = "cwe";
+    public static final String PATRON_IDENTIFICADOR_CWE = "CWE-\\d+";
+    public static final String RIESGO_CRITICO = "CRITICO";
+    public static final String RIESGO_ALTO = "ALTO";
+    public static final String RIESGO_MEDIO = "MEDIO";
+    public static final String RIESGO_BAJO = "BAJO";
+    public static final String SEVERIDAD_CRITICAL = "CRITICAL";
+    public static final String SEVERIDAD_HIGH = "HIGH";
+    public static final String SEVERIDAD_MEDIUM = "MEDIUM";
+    public static final String SEVERIDAD_LOW = "LOW";
+    public static final String SEVERIDAD_ERROR = "ERROR";
+    public static final String SEVERIDAD_WARNING = "WARNING";
+    public static final String SEVERIDAD_INFO = "INFO";
+    public static final String COMANDO_ESCANEAR = "scan";
+    public static final String OPCION_CONFIGURACION = "--config";
+    public static final String OPCION_JSON = "--json";
+    public static final String OPCION_METRICAS_DESACTIVADAS = "--metrics=off";
+    public static final String OPCION_SIN_REVISION_VERSION = "--disable-version-check";
+    public static final String OPCION_MOTOR_COMUNITARIO = "--oss-only";
+    public static final String OPCION_ESTRICTA = "--strict";
+    public static final String OPCION_SIN_ERROR_POR_HALLAZGOS = "--no-error";
+    public static final String OPCION_SIN_REESCRITURA_REGLAS = "--no-rewrite-rule-ids";
+    public static final String OPCION_SIN_GITIGNORE = "--no-git-ignore";
+    public static final String OPCION_SIN_NOSEM = "--disable-nosem";
+    public static final String OPCION_SIN_AUTOCORRECCION = "--no-autofix";
+    public static final String OPCION_UN_TRABAJADOR = "--jobs=1";
+    public static final String OPCION_MAX_BYTES_ARCHIVO = "--max-target-bytes";
+    public static final String OPCION_TIEMPO_REGLA = "--timeout";
+    public static final String OPCION_FIN_ARGUMENTOS = "--";
+    public static final String VARIABLE_PYTHONPATH = "PYTHONPATH";
+    public static final String VARIABLE_PYTHONSTARTUP = "PYTHONSTARTUP";
+    public static final String VARIABLE_PYTHONUTF8 = "PYTHONUTF8";
+    public static final String VARIABLE_TOKEN_SEMGREP = "SEMGREP_APP_TOKEN";
+    public static final String VARIABLE_CONFIGURACION_SEMGREP = "SEMGREP_SETTINGS_FILE";
+    public static final String ARCHIVO_CONFIGURACION_SEMGREP = "semgrep-settings.yaml";
+    public static final String VALOR_ACTIVADO = "1";
+    public static final String OPCION_DISTRIBUCION_WSL = "--distribution";
+    public static final String OPCION_DIRECTORIO_WSL = "--cd";
+    public static final String OPCION_EJECUTAR_WSL = "--exec";
+    public static final String COMANDO_WSLPATH = "/usr/bin/wslpath";
+    public static final String OPCION_RUTA_ABSOLUTA_WSL = "-a";
+    public static final String OPCION_RUTA_LINUX_WSL = "-u";
+    public static final String COMANDO_PYTHON_WSL = "/usr/bin/python3";
+    public static final String OPCION_PYTHON_AISLADO = "-I";
+    public static final String RECURSO_LANZADOR_WSL = "/semgrep/ejecutar_semgrep_wsl.py";
+    public static final String ARCHIVO_LANZADOR_WSL = "ejecutar_semgrep_wsl.py";
+    public static final String ARCHIVO_CANCELACION_WSL = "cancelar-semgrep";
+    public static final String MENSAJE_RUTA_WSL_INVALIDA = "No se pudo convertir el directorio de análisis a una ruta de WSL";
+    public static final Map<String, String> LENGUAJES_SEMGREP = Map.of(
+            "java", "Java", "python", "Python", "javascript", "JavaScript", "typescript", "TypeScript",
+            "c", "C", "cpp", "C++", "csharp", "C#", "php", "PHP");
 
     private Constantes() {
     }
