@@ -27,6 +27,11 @@ public class ConfiguracionAnalisisIA {
     @Bean
     AnalizadorIA analizadorIA(PropiedadesOllama propiedades, ObjectMapper mapper,
             RestClient.Builder constructorCliente) throws IOException {
+        return crearAnalizador(propiedades, mapper, constructorCliente);
+    }
+
+    public static AnalizadorIA crearAnalizador(PropiedadesOllama propiedades, ObjectMapper mapper,
+            RestClient.Builder constructorCliente) throws IOException {
         HttpClient transporte = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(propiedades.timeoutConexionSegundos()))
                 .followRedirects(HttpClient.Redirect.NEVER).build();
