@@ -1,6 +1,8 @@
 package com.mssecuritycodeanalysis.domain;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Set;
 
 public final class Constantes {
 
@@ -132,6 +134,78 @@ public final class Constantes {
     public static final String ARCHIVO_LANZADOR_WSL = "ejecutar_semgrep_wsl.py";
     public static final String ARCHIVO_CANCELACION_WSL = "cancelar-semgrep";
     public static final String MENSAJE_RUTA_WSL_INVALIDA = "No se pudo convertir el directorio de análisis a una ruta de WSL";
+    public static final String RUTA_ANALISIS_IA = "/api/v1/analysis/ai";
+    public static final String PREFIJO_CONFIGURACION_OLLAMA = "ollama";
+    public static final String RUTA_GENERACION_OLLAMA = "/api/generate";
+    public static final String RUTA_MODELOS_OLLAMA = "/api/tags";
+    public static final String METODO_DETECCION_IA = "IA";
+    public static final String PREFIJO_HALLAZGO_IA = "IA-";
+    public static final String ESTADO_ANALISIS_INCOMPLETO = "INCOMPLETO";
+    public static final String ESTADO_FRAGMENTO_ANALIZADO = "ANALIZADO";
+    public static final String ESTADO_FRAGMENTO_FALLIDO = "FALLIDO";
+    public static final String ESTADO_FRAGMENTO_PENDIENTE = "PENDIENTE";
+    public static final String ESTADO_SIN_COBERTURA = "SIN_COBERTURA";
+    public static final String MENSAJE_OLLAMA_NO_DISPONIBLE = "No se pudo establecer comunicación con Ollama local";
+    public static final String MENSAJE_MODELO_NO_ENCONTRADO = "El modelo configurado no está disponible en Ollama";
+    public static final String MENSAJE_TIEMPO_OLLAMA_AGOTADO = "Ollama superó el tiempo máximo de respuesta";
+    public static final String MENSAJE_RESPUESTA_IA_INVALIDA = "Ollama devolvió una respuesta JSON inválida";
+    public static final String MENSAJE_GENERACION_IA_INCOMPLETA = "Ollama no completó correctamente la generación";
+    public static final String MENSAJE_SIN_COBERTURA_IA = "El proyecto contiene archivos de lenguajes sin cobertura de IA";
+    public static final String MENSAJE_LINEA_IA_EXCESIVA = "Una línea completa no cabe en el contexto configurado; el archivo no se ha truncado";
+    public static final String MENSAJE_LIMITE_FRAGMENTOS_IA = "El archivo supera el máximo de fragmentos configurado; no se ha truncado";
+    public static final String MENSAJE_FRAGMENTO_PENDIENTE = "No analizado porque se interrumpió el procesamiento del proyecto";
+    public static final String MENSAJE_CONFIGURACION_IA_INVALIDA = "La URL debe ser local y los límites de contexto y fragmentación deben ser coherentes";
+    public static final String RECURSO_PROMPT_IA = "/ollama/prompt-seguridad.txt";
+    public static final String RECURSO_ESQUEMA_IA = "/ollama/esquema-hallazgos.json";
+    public static final String VERSION_PROMPT_IA = "seguridad-cwe-v3";
+    public static final String LIMITACION_ANALISIS_IA = "El análisis independiente por archivos y fragmentos puede omitir flujos que dependan de otros archivos o de contexto fuera del fragmento";
+    public static final String LIMITACION_ESTIMACION_CONTEXTO = "El presupuesto utiliza bytes UTF-8 como cota conservadora de tokens y reserva espacio para instrucciones, plantilla y generación; no utiliza un tokenizador exacto";
+    public static final String LIMITACION_HALLAZGOS_IA = "Los hallazgos de IA son indicios que requieren revisión técnica, no vulnerabilidades confirmadas";
+    public static final String CAMPO_MODELO_OLLAMA = "model";
+    public static final String CAMPO_MODELOS_OLLAMA = "models";
+    public static final String CAMPO_NOMBRE_MODELO_OLLAMA = "name";
+    public static final String CAMPO_DIGEST_MODELO = "digest";
+    public static final String CAMPO_PROMPT_OLLAMA = "prompt";
+    public static final String CAMPO_SISTEMA_OLLAMA = "system";
+    public static final String CAMPO_STREAM_OLLAMA = "stream";
+    public static final String CAMPO_PERMANENCIA_OLLAMA = "keep_alive";
+    public static final String PERMANENCIA_MODELO_PREDETERMINADA = "900";
+    public static final String CAMPO_FORMATO_OLLAMA = "format";
+    public static final String CAMPO_OPCIONES_OLLAMA = "options";
+    public static final String CAMPO_TEMPERATURA_OLLAMA = "temperature";
+    public static final String CAMPO_CONTEXTO_OLLAMA = "num_ctx";
+    public static final String CAMPO_GENERACION_OLLAMA = "num_predict";
+    public static final String CAMPO_SEMILLA_OLLAMA = "seed";
+    public static final String CAMPO_RESPUESTA_OLLAMA = "response";
+    public static final String CAMPO_FINALIZADO_OLLAMA = "done";
+    public static final String CAMPO_MOTIVO_FINALIZACION = "done_reason";
+    public static final String FINALIZACION_CORRECTA_OLLAMA = "stop";
+    public static final String CAMPO_TOKENS_ENTRADA = "prompt_eval_count";
+    public static final String CAMPO_HALLAZGOS_IA = "hallazgos";
+    public static final String CAMPO_CWE_IA = "cwe";
+    public static final String CAMPO_DESCRIPCION_IA = "descripcion";
+    public static final String CAMPO_LINEA_IA = "linea";
+    public static final String CAMPO_RIESGO_IA = "nivelRiesgo";
+    public static final String CAMPO_ARCHIVO_PROMPT = "archivo";
+    public static final String CAMPO_LENGUAJE_PROMPT = "lenguaje";
+    public static final String CAMPO_INICIO_PROMPT = "lineaInicio";
+    public static final String CAMPO_FIN_PROMPT = "lineaFin";
+    public static final String CAMPO_CODIGO_PROMPT = "codigoNumerado";
+    public static final String CAMPO_PROPIEDADES_ESQUEMA = "properties";
+    public static final String CAMPO_ELEMENTOS_ESQUEMA = "items";
+    public static final String CAMPO_MINIMO_ESQUEMA = "minimum";
+    public static final String CAMPO_MAXIMO_ESQUEMA = "maximum";
+    public static final String FORMATO_LINEA_NUMERADA = "%d | %s\n";
+    public static final String FORMATO_PROMPT_IA = "DATOS_NO_CONFIABLES:\n%s";
+    public static final String SEPARADOR_HUELLA_PROMPT = "\n";
+    public static final String PROTOCOLO_HTTP = "http";
+    public static final String PROTOCOLO_HTTPS = "https";
+    public static final String TEMPERATURA_MINIMA_IA = "0";
+    public static final String TEMPERATURA_MAXIMA_IA = "2";
+    public static final Set<String> HOSTS_OLLAMA_LOCALES = Set.of("localhost", "127.0.0.1", "::1", "[::1]");
+    public static final Set<String> CWE_ADMITIDAS_IA = Set.of("CWE-89", "CWE-78", "CWE-22");
+    public static final List<String> NIVELES_RIESGO_IA = List.of(
+            RIESGO_CRITICO, RIESGO_ALTO, RIESGO_MEDIO, RIESGO_BAJO);
     public static final Map<String, String> LENGUAJES_SEMGREP = Map.of(
             "java", "Java", "python", "Python", "javascript", "JavaScript", "typescript", "TypeScript",
             "c", "C", "cpp", "C++", "csharp", "C#", "php", "PHP");

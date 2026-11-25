@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["hallazgos"],
+  "properties": {
+    "hallazgos": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cwe", "descripcion", "linea", "nivelRiesgo"],
+        "properties": {
+          "cwe": {"type": "string", "enum": ["CWE-89", "CWE-78", "CWE-22"]},
+          "descripcion": {"type": "string", "minLength": 1},
+          "linea": {"type": "integer", "minimum": 1},
+          "nivelRiesgo": {"type": "string", "enum": ["CRITICO", "ALTO", "MEDIO", "BAJO"]}
+        }
+      }
+    }
+  }
+}
