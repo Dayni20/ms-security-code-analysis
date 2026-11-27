@@ -6,6 +6,7 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -35,6 +36,8 @@ import com.mssecuritycodeanalysis.infrastructure.adapter.out.semgrep.EjecutorSem
 import com.mssecuritycodeanalysis.infrastructure.config.PropiedadesSemgrep;
 
 public class AnalizadorSemgrep implements AnalizadorEstatico {
+    private static final int MAX_INTENTOS_LIMPIEZA = 4;
+    private static final System.Logger LOGGER = System.getLogger(AnalizadorSemgrep.class.getName());
 
     private final PropiedadesSemgrep propiedades;
     private final Path directorioTemporal;
@@ -224,23 +227,9 @@ public class AnalizadorSemgrep implements AnalizadorEstatico {
 
     private void eliminarDirectorioTrabajo(Path trabajo, RuntimeException fallo) {
         try {
-            Files.walkFileTree(trabajo, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path archivo, BasicFileAttributes atributos) throws IOException {
-                    Files.delete(archivo);
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path directorio, IOException error) throws IOException {
-                    if (error != null) {
-                        throw error;
-                    }
-                    Files.delete(directorio);
-                    return FileVisitResult.CONTINUE;
-                }
-            });
+            eliminarConReintentos(trabajo);
         } catch (IOException excepcion) {
+            LOGGER.log(System.Logger.Level.WARNING, "No se pudo eliminar el directorio temporal " + trabajo, excepcion);
             if (fallo != null) {
                 fallo.addSuppressed(excepcion);
             } else {
@@ -248,6 +237,47 @@ public class AnalizadorSemgrep implements AnalizadorEstatico {
                         Motivo.LIMPIEZA_FALLIDA, excepcion);
             }
         }
+    }
+
+    private void eliminarConReintentos(Path trabajo) throws IOException {
+        for (int intento = 1; intento <= MAX_INTENTOS_LIMPIEZA; intento++) {
+            try {
+                eliminarContenido(trabajo);
+                return;
+            } catch (IOException excepcion) {
+                if (intento == MAX_INTENTOS_LIMPIEZA) throw excepcion;
+                try {
+                    Thread.sleep(100L * intento);
+                } catch (InterruptedException interrupcion) {
+                    Thread.currentThread().interrupt();
+                    excepcion.addSuppressed(interrupcion);
+                    throw excepcion;
+                }
+            }
+        }
+    }
+
+    private void eliminarContenido(Path trabajo) throws IOException {
+        Files.walkFileTree(trabajo, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path archivo, BasicFileAttributes atributos) throws IOException {
+                Files.deleteIfExists(archivo);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path archivo, IOException error) throws IOException {
+                if (error instanceof NoSuchFileException) return FileVisitResult.CONTINUE;
+                throw error;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path directorio, IOException error) throws IOException {
+                if (error != null) throw error;
+                Files.deleteIfExists(directorio);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     private record ReglasLocales(byte[] contenido, Set<String> identificadores, Set<String> lenguajes, String huella) {

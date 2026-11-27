@@ -5,9 +5,9 @@ const formulario = obtener('formulario');
 const archivo = obtener('archivo');
 const metodo = obtener('metodo');
 const configuraciones = {
-  static: { ruta: '/api/v1/analysis/static', descripcion: 'Reglas locales de Semgrep para identificar patrones de riesgo.', espera: 'Semgrep está procesando los archivos. Mantén esta página abierta.' },
-  ai: { ruta: '/api/v1/analysis/ai', descripcion: 'Análisis independiente del código mediante Qwen y Ollama local.', espera: 'La IA analiza los archivos de forma secuencial. Puede tardar varios minutos; mantén esta página abierta.' },
-  hybrid: { ruta: '/api/v1/analysis/hybrid', descripcion: 'Detección independiente con ambos métodos y correlación de sus hallazgos.', espera: 'Se ejecutan ambos analizadores y se revisa la evidencia local. Puede tardar varios minutos; mantén esta página abierta.' }
+  static: { ruta: '/api/v1/analysis/static', espera: 'Semgrep está analizando los archivos.' },
+  ai: { ruta: '/api/v1/analysis/ai', espera: 'Qwen está analizando los archivos. Puede tardar varios minutos.' },
+  hybrid: { ruta: '/api/v1/analysis/hybrid', espera: 'Semgrep y Qwen están analizando el proyecto. Puede tardar varios minutos.' }
 };
 const nombresMetodos = { static: 'Análisis estático', ai: 'Análisis con IA', hybrid: 'Análisis híbrido' };
 const etiquetas = {
@@ -68,14 +68,14 @@ function detallesHallazgo(hallazgo) {
   if (hallazgo.justificacion) agregarDato(datos, 'Justificación', hallazgo.justificacion);
   detalles.append(datos);
   if (hallazgo.estadoRevision) {
-    detalles.append(crear('strong', 'Evidencia disponible'));
+    detalles.append(crear('strong', 'Evidencia'));
     const evidencia = crear('ul');
     lista(hallazgo.evidencia).forEach(paso => evidencia.append(crear('li', `${etiqueta(paso.tipo)} · líneas ${texto(paso.lineaInicio)}–${texto(paso.lineaFin)}: ${texto(paso.descripcion)}`)));
-    if (!evidencia.childElementCount) evidencia.append(crear('li', 'Sin evidencia local registrada.'));
+    if (!evidencia.childElementCount) evidencia.append(crear('li', 'Sin evidencia registrada.'));
     detalles.append(evidencia);
   }
   if (lista(hallazgo.originales).length) {
-    detalles.append(crear('strong', 'Hallazgos originales'), crear('pre', JSON.stringify(hallazgo.originales, null, 2)));
+    detalles.append(crear('strong', 'Alertas originales'), crear('pre', JSON.stringify(hallazgo.originales, null, 2)));
   }
   return detalles;
 }
@@ -104,8 +104,8 @@ function mostrarHallazgos(hallazgos, completo) {
   cuerpo.replaceChildren(fragmento);
   obtener('sin-hallazgos').hidden = hallazgos.length > 0;
   obtener('sin-hallazgos').textContent = completo
-    ? 'No se reportaron hallazgos en los archivos analizados y dentro de la cobertura disponible. Esto no garantiza que el código sea seguro.'
-    : 'No hay hallazgos disponibles en este resultado. El procesamiento es incompleto o fallido; no permite concluir que el proyecto esté libre de vulnerabilidades.';
+    ? 'Sin alertas en los archivos analizados. Esto no garantiza que el código sea seguro.'
+    : 'No hay alertas disponibles. El análisis no se completó.';
 }
 
 function agregarSeccion(titulo, valores) {
@@ -119,7 +119,6 @@ function agregarSeccion(titulo, valores) {
 
 function mostrarInformacion(resultado, metodoElegido) {
   obtener('informacion').replaceChildren();
-  obtener('cobertura').replaceChildren();
   const analizadores = metodoElegido === 'hybrid'
     ? [['Semgrep', resultado.estatico], ['IA', resultado.ia]]
     : [[metodoElegido === 'static' ? 'Semgrep' : 'IA', { resultado, estado: resultado.estado }]];
@@ -127,14 +126,11 @@ function mostrarInformacion(resultado, metodoElegido) {
     if (!ejecucion) return;
     const datos = ejecucion.resultado || {};
     const cobertura = ejecucion.cobertura || datos;
-    const cubiertos = lista(cobertura.lenguajesConCobertura || cobertura.lenguajesConReglas);
     const sinCobertura = lista(cobertura.lenguajesSinCobertura || cobertura.lenguajesSinReglas);
-    const resumen = cubiertos.length ? cubiertos.join(', ') : 'Cobertura no verificada';
-    obtener('cobertura').append(crear('span', `${nombre}: ${resumen}`));
     const valores = [
       `Estado: ${etiqueta(ejecucion.estado || (metodoElegido === 'static' ? 'COMPLETADO' : 'INCOMPLETO'))}`,
       `Lenguajes reconocidos: ${lista(cobertura.lenguajesReconocidos).join(', ') || 'No disponibles'}`,
-      `Sin cobertura: ${sinCobertura.join(', ') || 'Ninguno reportado'}`,
+      `Lenguajes que no se pueden analizar: ${sinCobertura.join(', ') || 'Ninguno'}`,
       `Archivos analizados: ${lista(cobertura.archivosAnalizados).length}`
     ];
     if (lista(cobertura.lenguajesSinVerificar).length) valores.push(`Sin verificar: ${cobertura.lenguajesSinVerificar.join(', ')}`);
@@ -149,19 +145,12 @@ function mostrarInformacion(resultado, metodoElegido) {
     if (datos.versionPrompt) valores.push(`Versión del prompt: ${datos.versionPrompt}`);
     if (datos.huellaPrompt) valores.push(`Huella del prompt: ${datos.huellaPrompt}`);
     agregarSeccion(nombre, valores);
-    if (datos.parametros) {
-      const detalle = crear('details');
-      detalle.append(crear('summary', `Parámetros de ${nombre}`), crear('pre', JSON.stringify(datos.parametros, null, 2)));
-      obtener('informacion').append(detalle);
-    }
     const pendientes = lista(datos.fragmentos).filter(fragmento => fragmento.estado !== 'ANALIZADO');
-    if (pendientes.length) agregarSeccion('Fragmentos sin análisis completo', pendientes.map(fragmento => `${texto(fragmento.rutaRelativa)} · ${texto(fragmento.estado)} · líneas ${texto(fragmento.lineaInicio)}–${texto(fragmento.lineaFin)} · ${texto(fragmento.descripcion)}`));
-    if (lista(datos.limitaciones).length) agregarSeccion(`Limitaciones de ${nombre}`, datos.limitaciones);
+    if (pendientes.length) agregarSeccion('Fragmentos incompletos', pendientes.map(fragmento => `${texto(fragmento.rutaRelativa)} · ${texto(fragmento.estado)} · líneas ${texto(fragmento.lineaInicio)}–${texto(fragmento.lineaFin)} · ${texto(fragmento.descripcion)}`));
+    if (nombre !== 'IA' && lista(datos.limitaciones).length) agregarSeccion(`Limitaciones de ${nombre}`, datos.limitaciones);
   });
-  if (lista(resultado.limitaciones).length && metodoElegido === 'hybrid') agregarSeccion('Limitaciones del análisis híbrido', resultado.limitaciones);
-  if (lista(resultado.criterios).length) agregarSeccion('Criterios de correlación', resultado.criterios);
   if (resultado.versionCorrelacion) agregarSeccion('Versión de correlación', [resultado.versionCorrelacion]);
-  if (resultado.tiempos) agregarSeccion('Tiempos del servidor', Object.entries(resultado.tiempos).map(([nombre, valor]) => `${nombre}: ${typeof valor === 'boolean' ? valor ? 'Sí' : 'No' : `${valor} ms`}`));
+  if (resultado.tiempos) agregarSeccion('Tiempos de análisis', Object.entries(resultado.tiempos).map(([nombre, valor]) => `${nombre}: ${typeof valor === 'boolean' ? valor ? 'Sí' : 'No' : `${valor} ms`}`));
 }
 
 function mostrarResultado(respuesta, metodoElegido, transcurrido, httpCorrecto) {
@@ -172,11 +161,11 @@ function mostrarResultado(respuesta, metodoElegido, transcurrido, httpCorrecto) 
   obtener('estado').replaceChildren(insignia(estado));
   obtener('nombre-proyecto').textContent = `${texto(respuesta.nombreArchivoZip || archivo.files[0]?.name)} · ${nombresMetodos[metodoElegido]}`;
   obtener('total-archivos').textContent = lista(resultado.archivosAnalizados).length;
-  obtener('detalle-archivos').textContent = metodoElegido === 'hybrid' ? 'Procesados por al menos un analizador' : 'Completados por el analizador';
+  obtener('detalle-archivos').textContent = metodoElegido === 'hybrid' ? 'Analizados por uno o ambos métodos' : 'Archivos con análisis completado';
   obtener('total-hallazgos').textContent = resultado.hallazgos.length;
   const tiempoServidor = resultado.tiempos?.totalMilisegundos;
   obtener('tiempo-total').textContent = duracion(Number.isFinite(tiempoServidor) ? tiempoServidor : transcurrido);
-  obtener('origen-tiempo').textContent = Number.isFinite(tiempoServidor) ? 'Tiempo informado por el servidor' : 'Tiempo de la solicitud en el navegador';
+  obtener('origen-tiempo').textContent = Number.isFinite(tiempoServidor) ? 'Tiempo del servidor' : 'Tiempo medido en el navegador';
   mostrarHallazgos(resultado.hallazgos, completo);
   mostrarInformacion(resultado, metodoElegido);
   obtener('resultados').hidden = false;
@@ -190,13 +179,11 @@ function mostrarResultado(respuesta, metodoElegido, transcurrido, httpCorrecto) 
   obtener('descargar-pdf').hidden = false;
   obtener('estado-descarga').textContent = '';
   const sinCobertura = lista(resultado.lenguajesSinReglas).length || lista(resultado.lenguajesSinCobertura).length;
-  if (!completo && httpCorrecto) mostrarAviso('Resultado parcial o incompleto. Consulta los errores y la cobertura antes de interpretar los hallazgos.');
-  else if (sinCobertura) mostrarAviso('El resultado incluye lenguajes sin cobertura. La ausencia de alertas no permite evaluar esos archivos.');
+  if (!completo && httpCorrecto) mostrarAviso('Análisis incompleto. Revisa los errores y la cobertura.');
+  else if (sinCobertura) mostrarAviso('Hay lenguajes que no se pueden analizar. Sus archivos no se han evaluado.');
   return true;
 }
 
-metodo.addEventListener('change', () => { obtener('descripcion-metodo').textContent = configuraciones[metodo.value].descripcion; });
-metodo.dispatchEvent(new Event('change'));
 archivo.addEventListener('change', () => {
   const seleccionado = archivo.files[0];
   archivoValidado = null;
@@ -204,6 +191,7 @@ archivo.addEventListener('change', () => {
   obtener('archivos-cargados').hidden = true;
   obtener('lista-archivos').replaceChildren();
   obtener('descripcion-archivo').textContent = seleccionado ? `${seleccionado.name} · ${(seleccionado.size / 1048576).toFixed(2)} MB` : 'Selecciona un archivo ZIP.';
+  actualizarDisponibilidad();
 });
 
 formulario.addEventListener('submit', async evento => {
@@ -212,6 +200,10 @@ formulario.addEventListener('submit', async evento => {
   const seleccionado = archivo.files[0];
   if (!seleccionado || !/\.zip$/i.test(seleccionado.name) || seleccionado.size === 0) {
     mostrarAviso('Selecciona un archivo ZIP que no esté vacío.', true);
+    return;
+  }
+  if (archivoValidado !== seleccionado) {
+    mostrarAviso('Primero valida el ZIP.', true);
     return;
   }
   const metodoElegido = metodo.value;
@@ -225,31 +217,28 @@ formulario.addEventListener('submit', async evento => {
   [archivo, metodo, obtener('iniciar')].forEach(elemento => { elemento.disabled = true; });
   formulario.setAttribute('aria-busy', 'true');
   obtener('procesando').hidden = false;
-  obtener('mensaje-espera').textContent = 'Verificando el formato y el contenido del ZIP en el servidor.';
+  obtener('mensaje-espera').textContent = configuracion.espera;
   actualizarDisponibilidad();
-  let inicio = performance.now();
+  const inicio = performance.now();
   const actualizarReloj = () => { obtener('cronometro').textContent = duracion(performance.now() - inicio); };
   actualizarReloj();
   const reloj = window.setInterval(actualizarReloj, 1000);
   const datos = new FormData();
   datos.append('file', seleccionado);
   try {
-    await validarZip(seleccionado);
-    obtener('mensaje-espera').textContent = configuracion.espera;
-    inicio = performance.now();
     const respuesta = await fetch(configuracion.ruta, { method: 'POST', body: datos, headers: { Accept: 'application/json' } });
     let contenido;
     try { contenido = await respuesta.json(); }
-    catch { throw new Error(`El servidor devolvió una respuesta no interpretable (HTTP ${respuesta.status}). No se puede determinar el resultado del análisis.`); }
-    if (!contenido || typeof contenido !== 'object' || Array.isArray(contenido)) throw new Error('El servidor no devolvió un objeto de respuesta válido.');
+    catch { throw new Error(`Respuesta no válida del servidor (HTTP ${respuesta.status}).`); }
+    if (!contenido || typeof contenido !== 'object' || Array.isArray(contenido)) throw new Error('Respuesta no válida del servidor.');
     const visible = mostrarResultado(contenido, metodoElegido, performance.now() - inicio, respuesta.ok);
     if (!respuesta.ok) {
       mostrarAviso(`HTTP ${respuesta.status} · ${texto(contenido.error || 'El análisis no pudo completarse')}${contenido.motivo ? ` · ${texto(contenido.motivo)}` : ''}${visible ? '. Se muestran los resultados disponibles.' : ''}`, true);
     } else if (!visible) {
-      throw new Error('La respuesta del servidor no contiene el resultado esperado. No se puede determinar si existen hallazgos.');
+      throw new Error('No se recibió un resultado válido del análisis.');
     }
   } catch (error) {
-    mostrarAviso(error instanceof TypeError ? 'No se pudo completar la comunicación con el servidor. Comprueba la conexión; no se puede confirmar si el procesamiento terminó.' : error.message, true);
+    mostrarAviso(error instanceof TypeError ? 'Sin conexión con el servidor. No se pudo confirmar el resultado.' : error.message, true);
   } finally {
     window.clearInterval(reloj);
     actualizarReloj();
@@ -268,7 +257,7 @@ obtener('descargar-pdf').addEventListener('click', async () => {
   boton.disabled = true;
   obtener('iniciar').disabled = true;
   boton.textContent = 'Generando informe…';
-  obtener('estado-descarga').textContent = 'Preparando el PDF con el resultado disponible, sin repetir el análisis.';
+  obtener('estado-descarga').textContent = 'Preparando el PDF…';
   try {
     const respuesta = await fetch('/api/v1/analysis/report/pdf', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' },
@@ -282,9 +271,9 @@ obtener('descargar-pdf').addEventListener('click', async () => {
       } catch {}
       throw new Error(mensaje);
     }
-    if (!respuesta.headers.get('Content-Type')?.includes('application/pdf')) throw new Error('El servidor no devolvió un archivo PDF válido.');
+    if (!respuesta.headers.get('Content-Type')?.includes('application/pdf')) throw new Error('El PDF recibido no es válido.');
     const pdf = await respuesta.blob();
-    if (!pdf.size || await pdf.slice(0, 5).text() !== '%PDF-') throw new Error('El archivo recibido no es un PDF válido.');
+    if (!pdf.size || await pdf.slice(0, 5).text() !== '%PDF-') throw new Error('El PDF recibido no es válido.');
     const direccion = URL.createObjectURL(pdf);
     const enlace = document.createElement('a');
     enlace.href = direccion;
@@ -293,9 +282,9 @@ obtener('descargar-pdf').addEventListener('click', async () => {
     enlace.click();
     enlace.remove();
     window.setTimeout(() => URL.revokeObjectURL(direccion), 30000);
-    obtener('estado-descarga').textContent = 'Se ha iniciado la descarga del informe PDF.';
+    obtener('estado-descarga').textContent = 'Descarga del PDF iniciada.';
   } catch (error) {
-    obtener('estado-descarga').textContent = error instanceof TypeError ? 'No se pudo descargar el PDF. Comprueba la conexión y vuelve a intentarlo.' : error.message;
+    obtener('estado-descarga').textContent = error instanceof TypeError ? 'No se pudo descargar el PDF. Revisa la conexión.' : error.message;
   } finally {
     descargando = false;
     boton.disabled = false;
@@ -315,29 +304,35 @@ async function solicitarJson(ruta, opciones = {}) {
   const respuesta = await fetch(ruta, { ...opciones, headers: { Accept: 'application/json', ...opciones.headers } });
   let contenido;
   try { contenido = await respuesta.json(); }
-  catch { throw new Error(`Respuesta no interpretable del servidor (HTTP ${respuesta.status}).`); }
+  catch { throw new Error(`Respuesta no válida del servidor (HTTP ${respuesta.status}).`); }
   if (!respuesta.ok) {
     const error = new Error(`HTTP ${respuesta.status} · ${texto(contenido?.error || 'No se pudo completar la solicitud')}`);
     error.estadoHTTP = respuesta.status;
     throw error;
   }
-  if (!contenido || typeof contenido !== 'object' || Array.isArray(contenido)) throw new Error('La respuesta no tiene la estructura esperada.');
+  if (!contenido || typeof contenido !== 'object' || Array.isArray(contenido)) throw new Error('Respuesta no válida del servidor.');
   return contenido;
 }
 
 async function validarZip(seleccionado) {
-  if (archivoValidado === seleccionado) return;
+  if (archivoValidado === seleccionado) {
+    obtener('archivos-cargados').open = true;
+    return;
+  }
   const datos = new FormData();
   datos.append('file', seleccionado);
-  obtener('validacion-zip').textContent = 'Validando el ZIP en el servidor…';
+  obtener('validacion-zip').textContent = 'Validando el ZIP…';
   const respuesta = await solicitarJson('/api/v1/analysis/upload', { method: 'POST', body: datos });
   if (!Number.isInteger(respuesta.cantidadArchivosFuente) || !Array.isArray(respuesta.archivos)) {
-    throw new Error('La respuesta de validación no contiene la lista de archivos esperada.');
+    throw new Error('No se recibió la lista de archivos.');
   }
-  const java = respuesta.archivos.filter(fuente => fuente.lenguaje === 'Java').length;
-  obtener('validacion-zip').textContent = `${texto(respuesta.nombreArchivoZip)} · ${respuesta.cantidadArchivosFuente} archivos fuente identificados; ${java} archivos Java.`;
+  const cantidadesPorLenguaje = new Map();
+  respuesta.archivos.forEach(fuente => cantidadesPorLenguaje.set(fuente.lenguaje, (cantidadesPorLenguaje.get(fuente.lenguaje) || 0) + 1));
+  const resumenArchivos = [...cantidadesPorLenguaje].map(([lenguaje, cantidad]) => `${cantidad} archivos ${lenguaje}`).join(' · ');
+  obtener('validacion-zip').textContent = `ZIP válido · ${resumenArchivos}.`;
   obtener('lista-archivos').replaceChildren(...respuesta.archivos.map(fuente => crear('li', `${texto(fuente.rutaRelativa)} · ${texto(fuente.lenguaje)}`)));
   obtener('archivos-cargados').hidden = false;
+  obtener('archivos-cargados').open = true;
   archivoValidado = seleccionado;
 }
 
@@ -399,7 +394,8 @@ function evaluacionFinalizada() {
 
 function actualizarDisponibilidad() {
   const ocupado = procesando || descargando || validandoZip || iniciandoEvaluacion || Boolean(evaluacionActiva());
-  [archivo, metodo, obtener('iniciar'), obtener('validar-zip')].forEach(elemento => { elemento.disabled = ocupado; });
+  [archivo, metodo, obtener('validar-zip')].forEach(elemento => { elemento.disabled = ocupado; });
+  obtener('iniciar').disabled = ocupado || !archivo.files[0] || archivoValidado !== archivo.files[0];
   obtener('iniciar-evaluacion').disabled = ocupado;
   obtener('seleccion-casos').disabled = iniciandoEvaluacion || Boolean(evaluacionActiva());
   obtener('identificadores').disabled = iniciandoEvaluacion || Boolean(evaluacionActiva());
@@ -432,14 +428,13 @@ function porcentajeMetrica(valor) {
 function guardarIdentificador(id) {
   obtener('identificador-evaluacion').value = id;
   try { localStorage.setItem(claveEvaluacion, id); }
-  catch { avisoEvaluacion('El navegador no permite guardar el identificador. Cópialo para recuperar esta evaluación.'); }
+  catch { avisoEvaluacion('No se pudo guardar el identificador. Cópialo para consultar la evaluación.'); }
 }
 
 function mostrarResumenEvaluacion(resumen) {
-  if (!resumen.identificador || !Object.hasOwn(estadosEvaluacion, resumen.estado)) throw new Error('El servidor no devolvió un estado de evaluación reconocido.');
+  if (!resumen.identificador || !Object.hasOwn(estadosEvaluacion, resumen.estado)) throw new Error('Estado de evaluación no válido.');
   resumenEvaluacion = resumen;
   obtener('resultado-evaluacion').hidden = false;
-  obtener('id-ejecucion').textContent = resumen.identificador;
   const [nombreEstado, clase] = estadosEvaluacion[resumen.estado];
   obtener('estado-evaluacion').replaceChildren(crear('span', nombreEstado, `insignia ${clase}`));
   const cantidades = { solicitados: 'casosSolicitados', procesados: 'casosProcesados', exitosos: 'casosExitosos', fallidos: 'casosFallidos', excluidos: 'casosExcluidosComparacion' };
@@ -449,7 +444,7 @@ function mostrarResumenEvaluacion(resumen) {
   obtener('porcentaje-evaluacion').textContent = porcentaje(resumen.porcentajeAvance);
   if (porcentaje(resumen.porcentajeAvance) === 'N/A') obtener('progreso-evaluacion').removeAttribute('value');
   else obtener('progreso-evaluacion').value = resumen.porcentajeAvance;
-  obtener('actualizacion-evaluacion').textContent = `Última consulta: ${new Date().toLocaleTimeString('es')}. ${evaluacionActiva() ? 'Consulta automática cada cinco segundos; puedes recargar y recuperar la ejecución.' : 'La ejecución finalizó. Las consultas automáticas se han detenido.'}`;
+  obtener('actualizacion-evaluacion').textContent = `Actualizado: ${new Date().toLocaleTimeString('es')}. ${evaluacionActiva() ? 'Actualización cada 5 segundos.' : 'Evaluación finalizada.'}`;
   mostrarMetricas();
   mostrarTrazabilidad(resumen);
   actualizarDisponibilidad();
@@ -459,11 +454,11 @@ function mostrarTrazabilidad(resumen) {
   const contenedor = obtener('trazabilidad-evaluacion');
   const datos = crear('dl');
   agregarDato(datos, 'Inicio', fechaLegible(resumen.fechaInicio));
-  agregarDato(datos, 'Finalización', fechaLegible(resumen.fechaFinalizacion));
-  agregarDato(datos, 'Casos seleccionados', lista(resumen.identificadoresSeleccionados));
-  agregarDato(datos, 'Casos fuera de la comparación principal en este estado', lista(resumen.identificadoresExcluidosComparacion));
-  if (resumen.error) agregarDato(datos, 'Error de la ejecución', resumen.error);
-  Object.entries(resumen.reproducibilidad || {}).forEach(([nombre, valor]) => agregarDato(datos, nombre, valor));
+  if (resumen.fechaFinalizacion) agregarDato(datos,
+    resumen.estado === 'INTERRUMPIDA' ? 'Interrupción registrada' : 'Finalización', fechaLegible(resumen.fechaFinalizacion));
+  if (resumen.reproducibilidad?.dataset) agregarDato(datos, 'Conjunto de pruebas', resumen.reproducibilidad.dataset);
+  if (resumen.error) agregarDato(datos, 'Error de la evaluación', resumen.estado === 'INTERRUMPIDA'
+    ? 'La evaluación se interrumpió antes de finalizar.' : resumen.error);
   contenedor.replaceChildren(datos);
 }
 
@@ -532,13 +527,13 @@ function mostrarCasosExperimentales() {
     cuerpo.append(fila);
   }
   obtener('estado-detalles').textContent = detallesEvaluacion.length
-    ? `${detallesEvaluacion.length} resultados individuales disponibles. VP: verdadero positivo · VN: verdadero negativo · FP: falso positivo · FN: falso negativo.`
-    : 'Todavía no hay casos procesados. La ausencia de resultados no significa que el código sea seguro.';
+    ? `${detallesEvaluacion.length} casos con resultados.`
+    : 'Aún no hay casos procesados.';
 }
 
 function detallesCasoExperimental(resultado) {
   const detalle = crear('details');
-  detalle.append(crear('summary', 'Tiempos, hallazgos y errores'));
+  detalle.append(crear('summary', 'Tiempos, alertas y errores'));
   const datos = crear('dl');
   if (resultado.falloTecnico) agregarDato(datos, 'Fallo técnico', resultado.falloTecnico);
   agregarDato(datos, 'Tiempo del caso', Number.isFinite(resultado.tiempoMilisegundos) ? duracion(resultado.tiempoMilisegundos) : 'N/A');
@@ -549,7 +544,7 @@ function detallesCasoExperimental(resultado) {
   detalle.append(datos);
   if (resultado.resultadosOriginales) {
     const originales = crear('details');
-    originales.append(crear('summary', 'Resultados originales y trazabilidad'), crear('pre', JSON.stringify(resultado.resultadosOriginales, null, 2)));
+    originales.append(crear('summary', 'Resultados originales'), crear('pre', JSON.stringify(resultado.resultadosOriginales, null, 2)));
     detalle.append(originales);
   }
   return detalle;
@@ -575,16 +570,18 @@ async function consultarEvaluacion(id, generacion) {
   try {
     const resumen = await solicitarJson(`/api/v1/evaluation/${encodeURIComponent(id)}`, { signal: controlador.signal });
     if (generacion !== generacionConsulta) return;
-    if (resumen.identificador !== id) throw new Error('El identificador de la respuesta no coincide con la ejecución consultada.');
+    if (resumen.identificador !== id) throw new Error('La respuesta corresponde a otra evaluación.');
     mostrarResumenEvaluacion(resumen);
-    avisoEvaluacion(resumen.error || (evaluacionActiva() ? 'Evaluación en curso.' : ''));
+    avisoEvaluacion(resumen.estado === 'INTERRUMPIDA'
+      ? ''
+      : resumen.error || (evaluacionActiva() ? 'Evaluación en curso.' : ''));
     guardarIdentificador(id);
     continuar = Boolean(evaluacionActiva());
     const versionDetalle = `${id}:${resumen.casosProcesados}:${resumen.estado}`;
     if (detallesActualizados !== versionDetalle) {
       const detalle = await solicitarJson(`/api/v1/evaluation/${encodeURIComponent(id)}/results`, { signal: controlador.signal });
       if (generacion !== generacionConsulta) return;
-      if (!Array.isArray(detalle.resultados)) throw new Error('El servidor no devolvió los resultados individuales esperados.');
+      if (!Array.isArray(detalle.resultados)) throw new Error('No se recibieron los resultados por caso.');
       detallesEvaluacion = detalle.resultados;
       detallesActualizados = versionDetalle;
     }
@@ -592,8 +589,8 @@ async function consultarEvaluacion(id, generacion) {
   } catch (error) {
     if (generacion !== generacionConsulta) return;
     continuar = ![400, 404].includes(error.estadoHTTP) && !evaluacionFinalizada();
-    const mensaje = error.name === 'AbortError' ? 'Se agotó el tiempo de consulta. Esto no cancela la evaluación del servidor.' : mensajeError(error);
-    avisoEvaluacion(`${mensaje}${continuar ? ' Reintentando en 5 segundos.' : ' Puedes consultar nuevamente con el identificador.'}`, true);
+    const mensaje = error.name === 'AbortError' ? 'La consulta tardó demasiado. La evaluación no se cancela.' : mensajeError(error);
+    avisoEvaluacion(`${mensaje}${continuar ? ' Reintentando en 5 segundos.' : ' Vuelve a consultar con el identificador.'}`, true);
   } finally {
     window.clearTimeout(limite);
     if (generacion === generacionConsulta) {
@@ -621,7 +618,7 @@ function recuperarEvaluacion(id) {
 obtener('formulario-recuperar').addEventListener('submit', evento => {
   evento.preventDefault();
   const id = obtener('identificador-evaluacion').value.trim().toLowerCase();
-  if (!validarIdentificadorEjecucion(id)) { avisoEvaluacion('Introduce un identificador de ejecución UUID válido.', true); return; }
+  if (!validarIdentificadorEjecucion(id)) { avisoEvaluacion('Introduce un identificador de evaluación válido (UUID).', true); return; }
   recuperarEvaluacion(id);
 });
 
@@ -639,11 +636,11 @@ obtener('formulario-evaluacion').addEventListener('submit', async evento => {
   if (seleccion && !identificadores.length) { avisoEvaluacion('Escribe al menos un identificador de caso.', true); return; }
   iniciandoEvaluacion = true;
   actualizarDisponibilidad();
-  avisoEvaluacion('Solicitando el inicio de la evaluación. El servidor validará los casos seleccionados.');
+  avisoEvaluacion('Iniciando evaluación…');
   try {
     const resumen = await solicitarJson('/api/v1/evaluation/run', { method: 'POST',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(seleccion ? { identificadores } : {}) });
-    if (!validarIdentificadorEjecucion(resumen.identificador || '')) throw new Error('La respuesta de inicio no contiene un identificador válido.');
+    if (!validarIdentificadorEjecucion(resumen.identificador || '')) throw new Error('No se recibió un identificador de evaluación válido.');
     detenerConsultas();
     detallesEvaluacion = [];
     detallesActualizados = null;
@@ -653,7 +650,7 @@ obtener('formulario-evaluacion').addEventListener('submit', async evento => {
     obtener('estado-csv').textContent = '';
     consultarEvaluacion(resumen.identificador, generacionConsulta);
   } catch (error) {
-    avisoEvaluacion(`${mensajeError(error)}${error instanceof TypeError ? ' No se repetirá automáticamente la solicitud de inicio.' : ''}`, true);
+    avisoEvaluacion(`${mensajeError(error)}${error instanceof TypeError ? ' El inicio no se reintentará automáticamente.' : ''}`, true);
   } finally { iniciandoEvaluacion = false; actualizarDisponibilidad(); }
 });
 
@@ -681,11 +678,11 @@ obtener('descargar-csv').addEventListener('click', async () => {
       try { const error = await respuesta.json(); if (error.error) mensaje += ` ${texto(error.error)}`; } catch {}
       throw new Error(mensaje);
     }
-    if (!respuesta.headers.get('Content-Type')?.includes('text/csv')) throw new Error('El servidor no devolvió un archivo CSV válido.');
+    if (!respuesta.headers.get('Content-Type')?.includes('text/csv')) throw new Error('El CSV recibido no es válido.');
     const csv = await respuesta.blob();
-    if (!csv.size) throw new Error('El archivo CSV recibido está vacío.');
+    if (!csv.size) throw new Error('El CSV está vacío.');
     descargarArchivo(csv, `evaluacion-${id}.csv`);
-    obtener('estado-csv').textContent = `Se inició la descarga del CSV de la evaluación ${id}.`;
+    obtener('estado-csv').textContent = `Descarga del CSV iniciada · ${id}.`;
   } catch (error) { obtener('estado-csv').textContent = mensajeError(error); }
   finally { descargandoCsv = false; actualizarDisponibilidad(); }
 });
@@ -695,7 +692,6 @@ function restaurarEvaluacion() {
   let id;
   try { id = localStorage.getItem(claveEvaluacion); } catch { return; }
   if (id && validarIdentificadorEjecucion(id)) {
-    abrirSeccion('evaluacion');
     obtener('identificador-evaluacion').value = id;
     recuperarEvaluacion(id);
   }

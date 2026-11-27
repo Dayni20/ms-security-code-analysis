@@ -98,10 +98,20 @@ class InformePdfTest {
         }
         try (PDDocument pdf = Loader.loadPDF(respuesta.getContentAsByteArray())) {
             String texto = new PDFTextStripper().getText(pdf);
-            assertThat(texto).contains("proyecto-áé.zip", "no garantiza", "cliente", "Archivos");
-            if (metodo.equals("static")) assertThat(texto).contains("1.187.0", "sha-reglas", "parámetros", "contraseña");
-            if (metodo.equals("ai")) assertThat(texto).contains("qwen2.5-coder", "digest-123", "sha-prompt", "4096");
-            if (metodo.equals("hybrid")) assertThat(texto).contains("Descartado con justificación", "Pendiente de revisión", "Respaldado por evidencia", "Justificación verificable", "Tiempo agotado");
+            assertThat(texto).contains("proyecto-áé.zip", "no son vulnerabilidades confirmadas", "Archivos analizados", "Alertas encontradas");
+            assertThat(texto).doesNotContain("Digest", "SHA-256", "Temperatura", "Trazabilidad de fragmentos", "RF-08",
+                    "Trazabilidad de correlación", "Limitaciones del método híbrido", "declarado por", "seguridad-cwe");
+            if (metodo.equals("static")) assertThat(texto).contains("1.187.0", "parámetros", "contraseña").doesNotContain("sha-reglas");
+            if (metodo.equals("ai")) assertThat(texto).contains("qwen2.5-coder", "no garantiza").doesNotContain("digest-123", "sha-prompt", "4096");
+            if (metodo.equals("hybrid")) assertThat(texto).contains("Descartada con justificación", "Pendiente de revisión", "Respaldada por evidencia", "Justificación verificable", "Tiempo agotado");
+            Path directorio = Path.of("build", "verificacion-pdf");
+            Files.createDirectories(directorio);
+            Files.write(directorio.resolve("informe-" + metodo + ".pdf"), respuesta.getContentAsByteArray());
+            PDFRenderer renderer = new PDFRenderer(pdf);
+            for (int pagina = 0; pagina < pdf.getNumberOfPages(); pagina++) {
+                javax.imageio.ImageIO.write(renderer.renderImageWithDPI(pagina, 95), "PNG",
+                        directorio.resolve(metodo + "-pagina-" + (pagina + 1) + ".png").toFile());
+            }
         }
     }
 

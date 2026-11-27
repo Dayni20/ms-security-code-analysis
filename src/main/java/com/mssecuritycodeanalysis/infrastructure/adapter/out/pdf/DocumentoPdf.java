@@ -22,7 +22,7 @@ final class DocumentoPdf implements AutoCloseable {
     private static final Color TINTA = new Color(25, 42, 61);
     private static final Color ACENTO = new Color(17, 111, 101);
     private static final float[] COLUMNAS = {51, 226, 218, 35, 80, UTIL - 610};
-    private static final List<String> CABECERAS = List.of("CWE", "Descripción del indicio", "Archivo", "Línea", "Riesgo", "Detección");
+    private static final List<String> CABECERAS = List.of("CWE", "Descripción de la alerta", "Archivo", "Línea", "Riesgo", "Detección");
     private final PDDocument documento;
     private final PDType0Font fuente;
     private PDPageContentStream contenido;
@@ -45,8 +45,8 @@ final class DocumentoPdf implements AutoCloseable {
         documento.addPage(pagina);
         contenido = new PDPageContentStream(documento, pagina);
         rectangulo(MARGEN, ALTO - 43, UTIL, 4, ACENTO);
-        dibujar("SECURITY / CODE ANALYSIS", MARGEN, ALTO - 64, 11, TINTA);
-        dibujar("INFORME TÉCNICO ACADÉMICO · RF-08", ANCHO - 295, ALTO - 64, 9, ACENTO);
+        dibujar("ANÁLISIS DE SEGURIDAD", MARGEN, ALTO - 64, 11, TINTA);
+        dibujar("INFORME DE RESULTADOS", ANCHO - 295, ALTO - 64, 9, ACENTO);
         y = ALTO - 94;
     }
 
@@ -61,6 +61,14 @@ final class DocumentoPdf implements AutoCloseable {
         y -= 12;
         parrafo(titulo, 13, ACENTO);
         y -= 4;
+    }
+
+    void bloque(String titulo, List<String> parrafos) throws IOException {
+        float alto = 20 + envolver(titulo, UTIL, 13).size() * 17;
+        for (String parrafo : parrafos) alto += envolver(parrafo, UTIL, 10).size() * 14 + 4;
+        if (alto <= ALTO - 140) espacio(alto);
+        seccion(titulo);
+        for (String parrafo : parrafos) parrafo(parrafo);
     }
 
     void parrafo(String texto) throws IOException {
@@ -207,7 +215,7 @@ final class DocumentoPdf implements AutoCloseable {
                 pie.setFont(fuente, 8);
                 pie.setNonStrokingColor(TINTA);
                 pie.newLineAtOffset(MARGEN, 24);
-                pie.showText("Indicios sujetos a revisión técnica");
+                pie.showText("Informe de seguridad");
                 pie.newLineAtOffset(UTIL - 110, 0);
                 pie.showText("Página " + (indice + 1) + " de " + total);
                 pie.endText();
